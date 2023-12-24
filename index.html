@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Shooter</title>
+</head>
+<style>
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    text-decoration: none;
+    border: none;
+    outline: none;
+    width: 100%;
+    font-family: calibri;
+    font-weight: normal;
+}
+
+img {
+   display: block;
+   max-width: 100%;
+}
+
+button {
+   cursor: pointer;
+}
+
+.gameFrame {
+    height: 100vh;
+    width: 100%;
+    background-color: black;
+    margin: auto;
+    display: flex;
+    justify-content: space-between;
+    position: absolute;
+    overflow: hidden;
+}
+
+.enemy {
+    height: 400px;
+    width: 19%;
+    background-color: yellow;
+    position: relative;
+    bottom: -100%;
+    transition: 0.4s;
+}
+
+.show {
+    bottom: -50%;
+    transition: 0.4s;
+}
+
+.shoot {
+    background-color: red;
+}
+
+.dead {
+    height: 100px;
+    opacity: 0.5;
+    bottom: -85%;
+}
+
+.startGameBtnEl {
+    position: absolute;
+    padding: 1em 2.5em;
+    border-radius: 3em;
+    left: 50%;
+    top: 90%;
+    transform: translate(-50%, -90%);
+    width: fit-content;
+}
+
+.healthBar {
+    width: 100%;
+    height: 1em;
+    background-color: red;
+    position: absolute;
+    transition: width 0.4s;
+}
+
+.scoreContainer {
+    position: absolute;
+    color: white;
+    top: 3em;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1em;
+}
+
+.gameOver {
+    position: absolute;
+    background-color: white;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    max-width: 400px;
+    border-radius: 1em;
+    padding: 2em;
+}
+
+.gameOver h1 {
+    font-weight: bold;
+    font-size: 50px;
+}
+
+.gameOver p {
+    margin: 1em auto;
+}
+
+.gameOver button {
+    border-radius: 1em;
+    color: white;
+    background-color: rgb(69, 137, 255);
+    padding: 1em;
+}
+
+.shrink {
+    transform: scale(0);
+}
+
+</style>
+<body>
+    
+    <div class="gameFrame" id="gameFrame">
+        <div class="healthBar" id="healthBar"></div>
+        <div class="scoreContainer">
+            <div>Kills: <span id="score">0</span></div>
+            <div>Highest-Kills: <span id="highestScore"></span></div>
+        </div>
+    </div>
+
+    <div class="gameOver" id="gameOver">
+        <h1 id="bigScore">0</h1>
+        <p>Kills</p>
+        <button id="startGameBtnEl">Restart Game</button>
+    </div>
+
+<script>
+
+let gameFrame = document.getElementById("gameFrame")
+let startGameBtnEl = document.getElementById("startGameBtnEl")
+let healthBar = document.getElementById("healthBar")
+let gameOverEl = document.getElementById("gameOver")
+
+let highestScoreEl = document.getElementById("highestScore")
+let scoreKillArray = []
+
+let killsElem
+let bigScore
+
+let healthPoints = 100
+let score = 0
+
+let gameInterval = null
+
+let scoreKillArrayFromLocalStorage = JSON.parse(localStorage.getItem("scoreKillArray"))
+
+if (scoreKillArrayFromLocalStorage) {
+    scoreKillArray = scoreKillArrayFromLocalStorage
+    highestScoreEl.textContent = Math.max.apply(null, scoreKillArray)
+}
+
+createEnemies()
+
+let enemies = document.querySelectorAll(".enemy")
+
+function createEnemies() {
+    for (let i = 0; i < 10; i++) {
+        gameFrame.innerHTML += `
+                                <div class="enemy"></div>
+                            `
+    }
+}
+
+function revealEnemies(enemy) {
+    enemy.classList.add("show")
+
+    shootEnemy(enemy)    
+    
+    setTimeout(() => {
+        if (!enemy.classList.contains("dead") && enemy.classList.contains("show")) {
+            enemyShootsMe(enemy)
+        }    
+    }, 800); 
+    
+    setTimeout(() => {
+        enemy.classList.remove("show")
+    }, 1200)
+}
+
+function shootEnemy(enemy) {
+    enemy.addEventListener("click", () => {
+        enemy.classList.add('dead')
+
+        updateKills(score + 1)
+
+        setTimeout(() => {
+            enemy.classList.remove("dead")
+        }, 1100); 
+    }, {once: true})
+}
+
+function enemyShootsMe(enemy) {
+    enemy.classList.add("shoot")
+
+    updateHealth(healthPoints - 10)
+
+    setTimeout(() => {
+        enemy.classList.remove("shoot")
+    }, 200);
+}
+
+
+function updateHealth(points) {
+    healthPoints = points
+    let healthBar = document.getElementById("healthBar")
+
+    healthBar.style.width = points + "%"
+
+    if (healthPoints < 1) {
+        endGame()
+    }
+}
+
+function updateKills(kills) {
+    score = kills
+    killsElem = document.getElementById("score")
+    bigScore = document.getElementById("bigScore")
+
+    killsElem.textContent = score
+    bigScore.textContent = score
+}
+
+function startGame() {
+    gameInterval = setInterval(() => {
+        revealEnemies(enemies[Math.floor(Math.random() * enemies.length)])
+    }, 1500);
+
+    gameOverEl.classList.add("shrink")
+    updateKills(0)
+    updateHealth(100)
+    highestScoreEl.textContent = Math.max.apply(null, scoreKillArray)
+}
+
+function endGame() {
+    gameOverEl.classList.remove("shrink")    
+    clearInterval(gameInterval)
+    killsElem = document.getElementById("score")
+
+    bigScore = document.getElementById("bigScore")
+    bigScore.textContent = killsElem.textContent
+
+    scoreKillArray.push(killsElem.textContent)
+    localStorage.setItem("scoreKillArray", JSON.stringify(scoreKillArray))    
+    highestScoreEl.textContent = Math.max.apply(null, scoreKillArray)
+}
+
+startGameBtnEl.addEventListener("click", startGame)
+
+</script>
+
+</body>
+</html>
